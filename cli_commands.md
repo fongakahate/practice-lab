@@ -4,10 +4,10 @@ Key pair:\
 `aws ec2 create-key-pair --key-name cli_ec2_key --query 'KeyMaterial' --output text > cli_ec2_key.pem`
 
 Security group and rules:\
-`aws ec2 create-security-group --group-name cli_sg --description "cli_sg"`
-`aws ec2 authorize-security-group-ingress --group-name cli_sg --protocol tcp --port 80 --cidr 0.0.0.0/0`
-`aws ec2 authorize-security-group-ingress --group-name cli_sg --protocol tcp --port 22 --cidr 0.0.0.0/0`
-`aws ec2 authorize-security-group-ingress --group-name cli_sg --protocol tcp --port 443 --cidr 0.0.0.0/0`
+`aws ec2 create-security-group --group-name cli_sg --description "cli_sg"`\
+`aws ec2 authorize-security-group-ingress --group-name cli_sg --protocol tcp --port 80 --cidr 0.0.0.0/0`\
+`aws ec2 authorize-security-group-ingress --group-name cli_sg --protocol tcp --port 22 --cidr 0.0.0.0/0`\
+`aws ec2 authorize-security-group-ingress --group-name cli_sg --protocol tcp --port 443 --cidr 0.0.0.0/0`\
 
 Launch configuration:\
 `aws autoscaling create-launch-configuration --launch-configuration-name cli_lc --key-name cli_ec2_key --security-groups sg-06f821da55b669771 --image-id ami-0533f2ba8a1995cf9 --instance-type t2.micro`
