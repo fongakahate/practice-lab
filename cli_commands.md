@@ -30,6 +30,24 @@ Autoscaling group:\
 Scaling policy:\
 `aws autoscaling put-scaling-policy --policy-name cpu75-scaling-policy-cli --auto-scaling-group-name cli_asg --policy-type TargetTrackingScaling --target-tracking-configuration file://scaling_policy.json`
 
+S3 bucket:\
+`aws s3 mb s3://practical-lab-cli-bucket`
+
+Coppy content to S3:\
+`aws s3 cp C:\Users\G1lev14\Desktop\test\dist s3://practical-lab-cli-bucket/ --recursive --acl public-read`
+
+S3 static website hosting:\
+`aws s3 website s3://practical-lab-cli-bucket/ --index-document index.html`
+
+CloudFront:\
+`aws cloudfront create-distribution --origin-domain-name practical-lab-cli-bucket.s3-website-us-east-1.amazonaws.com`
+
+RDS:\
+`aws rds create-db-instance --db-instance-identifier cli-rds-mysql --db-instance-class db.t2.micro --engine mysql --availability-zone us-east-1a --master-username admin --master-user-password Password --allocated-storage 10`
+
+Read replica:\
+`aws rds create-db-instance-read-replica --db-instance-identifier cli-rds-mysql-rr --source-db-instance-identifier cli-rds-mysql`
+
 **Destroy**
 
 Autoscaling group:\
@@ -43,3 +61,23 @@ Load balancer:\
 
 Target group:\
 `aws elbv2 delete-target-group --target-group-arn arn:aws:elasticloadbalancing:us-east-1:617155810538:targetgroup/cli-tg/f7ad8f8a1dfeee92`
+
+🔥CloudFront (used jq):\
+`aws cloudfront get-distribution-config --id EKIAYSEMO17FH | jq '. | .ETag'` - ETag is requiered for futher actions\
+`aws cloudfront get-distribution-config --id EKIAYSEMO17FH | jq '. | .DistributionConfig' > distconfig`\
+in 'distconfig' file state `"Enabled": true` should be changed to `"Enabled": false`\
+`aws cloudfront update-distribution --id EKIAYSEMO17FH --if-match E17S3MLB0OW5JW --distribution-config file://distconfig`\
+`aws cloudfront get-distribution-config --id EKIAYSEMO17FH | jq '. | .ETag'` - should be executed 2nd time cuz after distribution update ETag has been changed\
+`aws cloudfront delete-distribution --id EKIAYSEMO17FH --if-match EUSGNMUABF7TO`
+
+S3 content removal:\
+`aws s3 rm s3://practical-lab-cli-bucket --recursive`
+
+Bucket removal:\
+`aws s3api delete-bucket --bucket practical-lab-cli-bucket --region us-east-1`
+
+RDS read replica:\
+`aws rds delete-db-instance --db-instance-identifier cli-rds-mysql-rr --skip-final-snapshot`
+
+RDS db:\
+`aws rds delete-db-instance --db-instance-identifier cli-rds-mysql --skip-final-snapshot`
