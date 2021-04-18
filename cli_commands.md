@@ -63,7 +63,7 @@ Target group:\
 `aws elbv2 delete-target-group --target-group-arn arn:aws:elasticloadbalancing:us-east-1:617155810538:targetgroup/cli-tg/f7ad8f8a1dfeee92`
 
 🔥CloudFront (used jq):\
-`aws cloudfront get-distribution-config --id EKIAYSEMO17FH | jq '. | .ETag'` - ETag is requiered for futher actions\
+`aws cloudfront get-distribution-config --id EKIAYSEMO17FH | jq '. | .ETag'` - ETag is requiered for further actions\
 `aws cloudfront get-distribution-config --id EKIAYSEMO17FH | jq '. | .DistributionConfig' > distconfig`\
 in 'distconfig' file state `"Enabled": true` should be changed to `"Enabled": false`\
 `aws cloudfront update-distribution --id EKIAYSEMO17FH --if-match E17S3MLB0OW5JW --distribution-config file://distconfig`\
