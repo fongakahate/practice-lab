@@ -48,6 +48,9 @@ RDS:\
 Read replica:\
 `aws rds create-db-instance-read-replica --db-instance-identifier cli-rds-mysql-rr --source-db-instance-identifier cli-rds-mysql`
 
+Route 53:\
+`aws route53 change-resource-record-sets --hosted-zone-id Z055864528N55T2QBZGQA --change-batch file://route53_cli.json`
+
 **Destroy**
 
 Autoscaling group:\
@@ -81,3 +84,6 @@ RDS read replica:\
 
 RDS db:\
 `aws rds delete-db-instance --db-instance-identifier cli-rds-mysql --skip-final-snapshot`
+
+Route 53:\
+`aws route53 change-resource-record-sets --hosted-zone-id Z055864528N55T2QBZGQA --change-batch file://route53_cli_delete_record.json`
