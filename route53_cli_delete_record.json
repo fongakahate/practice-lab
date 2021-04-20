@@ -1,0 +1,14 @@
+{
+    "Comment": "Route 53 CLI",
+    "Changes": [{
+               "Action": "DELETE",
+               "ResourceRecordSet": {
+                           "Name": "elb.g1lev14.xyz",
+                           "Type": "A",
+                           "AliasTarget":{
+                                   "HostedZoneId": "Z35SXDOTRQ7X7K",
+                                   "DNSName": "dualstack.practical-lab-lb-1366236346.us-east-1.elb.amazonaws.com",
+                                   "EvaluateTargetHealth": false
+                             }}
+                         }]
+}
