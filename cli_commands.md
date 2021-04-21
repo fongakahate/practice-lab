@@ -89,5 +89,5 @@ RDS db:\
 `aws rds delete-db-instance --db-instance-identifier cli-rds-mysql --skip-final-snapshot`
 
 Route 53:\
-`aws route53 delete-hosted-zone --id Z09531801A8C90T7RY6YF`
+`aws route53 delete-hosted-zone --id Z09531801A8C90T7RY6YF`\
 `aws route53 change-resource-record-sets --hosted-zone-id Z055864528N55T2QBZGQA --change-batch file://route53_cli_delete_record.json`
