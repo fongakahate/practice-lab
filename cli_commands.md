@@ -1,16 +1,15 @@
 **Create**
 
 Key pair:\
-`aws ec2 create-key-pair\
---key-name cli_ec2_key\
---query 'KeyMaterial'\
---output text > cli_ec2_key.pem`
+`aws ec2 create-key-pair --key-name cli_ec2_key --query 'KeyMaterial' --output text > cli_ec2_key.pem`
 
 Security group and rules:\
 `aws ec2 create-security-group --group-name cli_sg --description "cli_sg"`\
 `aws ec2 authorize-security-group-ingress --group-name cli_sg --protocol tcp --port 80 --cidr 0.0.0.0/0`\
 `aws ec2 authorize-security-group-ingress --group-name cli_sg --protocol tcp --port 22 --cidr 0.0.0.0/0`\
-`aws ec2 authorize-security-group-ingress --group-name cli_sg --protocol tcp --port 443 --cidr 0.0.0.0/0`
+`aws ec2 authorize-security-group-ingress --group-name cli_sg --protocol tcp --port 443 --cidr 0.0.0.0/0`\
+`aws ec2 create-security-group --group-name rdssg --description "RDS SG"`\
+`aws ec2 authorize-security-group-ingress --group-name rdssg --protocol tcp --port 3306 --cidr 172.31.46.194/32`
 
 Launch configuration:\
 `aws autoscaling create-launch-configuration --launch-configuration-name cli_lc --key-name cli_ec2_key --security-groups sg-06f821da55b669771 --image-id ami-0533f2ba8a1995cf9 --instance-type t2.micro`
@@ -46,12 +45,13 @@ CloudFront:\
 `aws cloudfront create-distribution --origin-domain-name practical-lab-cli-bucket.s3-website-us-east-1.amazonaws.com`
 
 RDS:\
-`aws rds create-db-instance --db-instance-identifier cli-rds-mysql --db-instance-class db.t2.micro --engine mysql --availability-zone us-east-1a --master-username admin --master-user-password Password --allocated-storage 10`
+`aws rds create-db-instance --db-instance-identifier cli-rds-mysql --db-instance-class db.t2.micro --engine mysql --availability-zone us-east-1a --master-username admin --master-user-password Password --allocated-storage 10 add to db creation --vpc-security-group-ids sg-08b8ae0340f845350`
 
 Read replica:\
 `aws rds create-db-instance-read-replica --db-instance-identifier cli-rds-mysql-rr --source-db-instance-identifier cli-rds-mysql`
 
 Route 53:\
+`aws route53 create-hosted-zone --name clihostedzone.com --caller-reference 1618996726 --hosted-zone-config Comment="CLI TEST"`\
 `aws route53 change-resource-record-sets --hosted-zone-id Z055864528N55T2QBZGQA --change-batch file://route53_cli.json`
 
 **Destroy**
@@ -89,4 +89,5 @@ RDS db:\
 `aws rds delete-db-instance --db-instance-identifier cli-rds-mysql --skip-final-snapshot`
 
 Route 53:\
+`aws route53 delete-hosted-zone --id Z09531801A8C90T7RY6YF`
 `aws route53 change-resource-record-sets --hosted-zone-id Z055864528N55T2QBZGQA --change-batch file://route53_cli_delete_record.json`
