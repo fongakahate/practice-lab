@@ -1,7 +1,10 @@
 **Create**
 
 Key pair:\
-`aws ec2 create-key-pair --key-name cli_ec2_key --query 'KeyMaterial' --output text > cli_ec2_key.pem`
+`aws ec2 create-key-pair \
+--key-name cli_ec2_key \
+--query 'KeyMaterial' \
+--output text > cli_ec2_key.pem`
 
 Security group and rules:\
 `aws ec2 create-security-group --group-name cli_sg --description "cli_sg"`\
