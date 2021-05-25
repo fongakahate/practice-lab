@@ -14,6 +14,16 @@
       "Description" : "Subtens list"
     },
 
+    "HostedZone" : {
+      "Type" : "String",
+      "Description" : "Hosted zone ending with the dot"
+    },
+
+    "Prefix" :{
+      "Type" : "String",
+      "Description" : "Prefix"
+    },
+
     "KeyName": {
       "Type": "AWS::EC2::KeyPair::KeyName",
       "Description" : "EC2 KeyPair"
@@ -139,7 +149,7 @@
       "Type" : "AWS::ElasticLoadBalancingV2::TargetGroup",
       "Properties" : {
         "Name" : "CloudFormationALBTG",
-        "HealthCheckPath" : "/wp-admin/setup-config.php", 
+        "HealthCheckPath" : "/wp-admin/install.php", 
         "HealthCheckIntervalSeconds" : 10,
         "HealthCheckTimeoutSeconds" : 5,
         "HealthyThresholdCount" : 2,
@@ -303,6 +313,23 @@
         "VPCSecurityGroups" : [{ "Fn::GetAtt": [ "DBEC2SecurityGroup", "GroupId" ]}]
       }
     },
+
+    "myDNS" : {
+      "Type" : "AWS::Route53::RecordSetGroup",
+      "Properties" : {
+        "HostedZoneName" : { "Ref" : "HostedZone" },
+        "RecordSets" : [
+          {
+            "Name" : { "Fn::Join" : [ ".", [ { "Ref" : "Prefix" }, { "Ref" : "HostedZone" } ] ] },
+            "Type" : "A",
+            "AliasTarget" : {
+                "HostedZoneId" : { "Fn::GetAtt" : ["ApplicationLoadBalancer", "CanonicalHostedZoneID"] },
+                "DNSName" : { "Fn::GetAtt" : ["ApplicationLoadBalancer","DNSName"] }
+            }
+          }
+        ]
+      }
+    },
   
     "S3Bucket" : {
       "Type" : "AWS::S3::Bucket",
@@ -332,7 +359,52 @@
          },
         "Bucket" : { "Ref" : "S3Bucket" }
       }
+    },
+
+    "CloudFrontDistribution" : {
+      "Type" : "AWS::CloudFront::Distribution",
+      "Properties" : {
+          "DistributionConfig" : {
+              "Origins" : [ {
+                  "DomainName" : { "Fn::Select" : [ 1, { "Fn::Split" : [ "//", { "Fn::GetAtt" : [ "S3Bucket", "WebsiteURL" ] } ] } ] },
+                  "Id" : { "Ref" : "S3Bucket" },
+                  "CustomOriginConfig" : {
+                    "HTTPPort" : "80",
+                    "HTTPSPort" : "443",
+                    "OriginProtocolPolicy" : "match-viewer"
+                  } 
+              }],
+              "Enabled" : "true",
+              "DefaultRootObject" : "index.html",
+              "DefaultCacheBehavior" : {
+                  "TargetOriginId" : { "Ref" : "S3Bucket" },
+                  "ForwardedValues" : {
+                      "QueryString" : "false",
+                      "Cookies" : { "Forward" : "all" }
+                  },
+                  "ViewerProtocolPolicy" : "allow-all"
+              },
+             "PriceClass" : "PriceClass_All",
+             "ViewerCertificate" : { "CloudFrontDefaultCertificate" : "true" }  
+          }
+      }
     }
     
-  }
+  },
+
+  "Outputs" : {
+    "S3URL" : {
+      "Value" : { "Fn::GetAtt" : [ "S3Bucket", "WebsiteURL" ] },
+      "Description" : "S3 address"
+    },
+    "CloudfrontURL" : {
+      "Value" : { "Fn::GetAtt" : [ "CloudFrontDistribution", "DomainName" ] },
+      "Description" : "Cloudfront address"
+    },
+    "ALBURL" : {
+      "Value" : { "Fn::Join" : ["", ["http://", { "Fn::GetAtt" : [ "ApplicationLoadBalancer", "DNSName" ]} ]]},
+      "Description" : "WordPress ALB"
+    }
+  } 
+
 }
