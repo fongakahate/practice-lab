@@ -314,10 +314,20 @@
       }
     },
 
+    "MyHostedZone": {
+      "Type": "AWS::Route53::HostedZone",
+      "Properties": {
+         "HostedZoneConfig": {
+            "Comment": "Hosted Zone"
+         },
+         "Name": { "Ref" : "HostedZone" }
+      }
+    },
+
     "myDNS" : {
       "Type" : "AWS::Route53::RecordSetGroup",
       "Properties" : {
-        "HostedZoneName" : { "Ref" : "HostedZone" },
+        "HostedZoneId" : { "Fn::GetAtt" : ["MyHostedZone", "Id"] },
         "RecordSets" : [
           {
             "Name" : { "Fn::Join" : [ ".", [ { "Ref" : "Prefix" }, { "Ref" : "HostedZone" } ] ] },
