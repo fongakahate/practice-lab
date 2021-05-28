@@ -24,6 +24,15 @@
       "Description" : "Prefix"
     },
 
+    "AWSAccessKeyId" : {
+      "Type" : "String"
+    },
+
+    "AWSSecretKey" : {
+      "NoEcho" : "true",
+      "Type" :"String"
+    },
+
     "KeyName": {
       "Type": "AWS::EC2::KeyPair::KeyName",
       "Description" : "EC2 KeyPair"
@@ -280,7 +289,24 @@
           "find /var/www -type d -exec chmod 2775 {} +\n",
           "find /var/www -type f -exec chmod 0664 {} +\n",
           "service httpd start\n",
-          "chkconfig httpd on\n"
+          "chkconfig httpd on\n",
+          "cd ~\n",
+          "mkdir -p .aws\n",
+          "cd .aws\n",
+          "echo '[default]' > config\n",
+          "echo 'region = us-east-1' >> config\n",
+          "echo '[default]' > credentials\n",
+          "echo 'aws_access_key_id = ",{ "Ref" : "AWSAccessKeyId" },"' >> credentials\n",
+          "echo 'aws_secret_access_key = ",{ "Ref" : "AWSSecretKey" },"' >> credentials\n",
+          "cd ~\n",
+          "aws s3 ls ",{ "Ref" : "S3Bucket" }," > test.txt\n",
+          "wget https://raw.githubusercontent.com/fongakahate/ui_config/main/test.sh\n",
+          "chmod +x test.sh\n",
+          "wget https://github.com/fongakahate/ui_config/raw/main/cloudfrontsite.tar.gz\n",
+          "tar -zxf cloudfrontsite.tar.gz\n",
+          "./test.sh\n",
+          "cd cloudfront_site\n",
+          "aws s3 cp ./ s3://",{ "Ref" : "S3Bucket" }," --recursive --acl public-read\n"
         ]]}}
       }
     },
