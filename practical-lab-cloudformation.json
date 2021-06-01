@@ -340,6 +340,14 @@
       }
     },
 
+    "RRInstance" : {
+      "Type": "AWS::RDS::DBInstance",
+      "Properties": {
+        "DBInstanceIdentifier": "ReadReplica",
+        "SourceDBInstanceIdentifier": { "Ref" : "DBInstance" }
+      }
+    },
+
     "MyHostedZone": {
       "Type": "AWS::Route53::HostedZone",
       "Properties": {
