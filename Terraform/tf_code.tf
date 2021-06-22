@@ -1,12 +1,26 @@
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "3.45.0"
+    }
+  }
+}
+
 provider "aws" {
   profile = "default"
   region = "us-east-1"
 }
 
-resource "aws_s3_bucket" "s3-bucket" {
-  bucket = "practical-lab-s3-bucket-656233"
-  acl = "public-read"
+
+data "http" "myip" {
+  url = "http://ipv4.icanhazip.com"
 }
+
+# resource "aws_s3_bucket" "s3-bucket" {
+#   bucket = "practical-lab-s3-bucket-656233"
+#   acl = "public-read"
+# }
 
 resource "aws_default_vpc" "default" {}
 
@@ -32,7 +46,7 @@ resource "aws_security_group" "SG" {
     from_port = 22
     to_port = 22
     protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["${chomp(data.http.myip.body)}/32"]
   }
 
   egress {
@@ -61,20 +75,52 @@ resource "aws_default_subnet" "az2" {
   }
 }
 
-resource "aws_elb" "ELB" {
+resource "aws_lb" "ELB" {
   name = "ELB"
+  load_balancer_type = "application"
   subnets = [aws_default_subnet.az1.id, aws_default_subnet.az2.id]
   security_groups = [aws_security_group.SG.id]
 
-  listener {
-    instance_port = 80
-    instance_protocol = "http"
-    lb_port = 80
-    lb_protocol = "http"
-  }
-
   tags = {
     "Terraform" : "true"
+  }
+}
+
+resource "aws_lb_listener" "lblistener" {
+  load_balancer_arn = aws_lb.ELB.arn
+  port = 80
+  protocol = "HTTP"
+
+  default_action {
+    type = "forward"
+    target_group_arn = aws_lb_target_group.TG.arn
+  }
+}
+
+resource "aws_lb_target_group" "TG" {
+  name = "TFTG"
+  port = 80
+  protocol = "HTTP"
+  vpc_id = aws_default_vpc.default.id
+
+  stickiness {
+    enabled = true
+    type    = "lb_cookie"
+  }
+
+  health_check {
+    healthy_threshold   = 2
+    interval            = 30
+    protocol            = "HTTP"
+    unhealthy_threshold = 2
+  }
+
+  depends_on = [
+    aws_lb.ELB
+  ]
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
@@ -88,6 +134,8 @@ resource "aws_launch_configuration" "LC" {
   lifecycle {
     create_before_destroy = true
   }
+
+  user_data = file("userdata.sh")
 }
 
 resource "aws_autoscaling_group" "ASG" {
@@ -111,5 +159,5 @@ resource "aws_autoscaling_group" "ASG" {
 
 resource "aws_autoscaling_attachment" "AS_attach" {
   autoscaling_group_name = aws_autoscaling_group.ASG.id
-  elb = aws_elb.ELB.id
+  alb_target_group_arn = aws_lb_target_group.TG.arn
 }
