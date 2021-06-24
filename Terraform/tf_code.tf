@@ -17,10 +17,62 @@ data "http" "myip" {
   url = "http://ipv4.icanhazip.com"
 }
 
-# resource "aws_s3_bucket" "s3-bucket" {
-#   bucket = "practical-lab-s3-bucket-656233"
-#   acl = "public-read"
-# }
+resource "aws_s3_bucket" "s3-bucket" {
+  bucket = "practical-lab-s3-bucket-656233"
+  acl = "public-read"
+
+  website {
+  index_document = "index.html"
+  }
+
+  tags = {
+    "Terraform" : "true"
+  }
+}
+
+locals {
+  s3_origin_id = "s3origin"
+}
+
+resource "aws_cloudfront_distribution" "CFDistribution" {
+  origin {
+    domain_name = aws_s3_bucket.s3-bucket.bucket_regional_domain_name
+    origin_id = local.s3_origin_id
+  }
+
+  enabled = true
+  comment = "TF Cloudfront Distribution"
+  default_root_object = "index.html"
+
+  default_cache_behavior {
+    allowed_methods = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods = ["GET", "HEAD"]
+    target_origin_id = local.s3_origin_id
+
+    forwarded_values {
+      query_string = false
+
+      cookies {
+        forward = "none"
+      }
+    }
+    
+    viewer_protocol_policy = "allow-all"
+    min_ttl = 0
+    default_ttl = 3600
+    max_ttl = 86400
+  }
+  
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
+}
 
 resource "aws_default_vpc" "default" {}
 
@@ -160,4 +212,56 @@ resource "aws_autoscaling_group" "ASG" {
 resource "aws_autoscaling_attachment" "AS_attach" {
   autoscaling_group_name = aws_autoscaling_group.ASG.id
   alb_target_group_arn = aws_lb_target_group.TG.arn
+}
+
+resource "aws_autoscaling_policy" "scaleup-cpu-policy" {
+  name = "scaleup-cpu-policy"
+  autoscaling_group_name = "aws_autoscaling_group.ASG.name"
+  adjustment_type = "ChangeInCapacity"
+  scaling_adjustment = "1"
+  cooldown = "120"
+  policy_type = "SimpleScaling"
+}
+
+resource "aws_cloudwatch_metric_alarm" "scaleup-cpu-alarm" {
+  alarm_name = "scaleup-cpu-alarm"
+  alarm_description = "scaleup-cpu-alarm"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods = "1"
+  metric_name = "CPUUtilization"
+  namespace = "AWS/EC2"
+  period = "60"
+  statistic = "Average"
+  threshold = "75"
+  dimensions = {
+  "AutoScalingGroupName" = "aws_autoscaling_group.ASG.name"
+  }
+  actions_enabled = true
+  alarm_actions = ["${aws_autoscaling_policy.scaleup-cpu-policy.arn}"]
+}
+
+resource "aws_autoscaling_policy" "scaledown-cpu-policy" {
+  name = "scaledown-cpu-policy"
+  autoscaling_group_name = "aws_autoscaling_group.ASG.name"
+  adjustment_type = "ChangeInCapacity"
+  scaling_adjustment = "-1"
+  cooldown = "120"
+  policy_type = "SimpleScaling"
+}
+
+resource "aws_cloudwatch_metric_alarm" "scaledown-cpu-alarm" {
+  alarm_name = "scaledown-cpu-alarm"
+  alarm_description = "scaledown-cpu-alarm"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods = "1"
+  metric_name = "CPUUtilization"
+  namespace = "AWS/EC2"
+  period = "60"
+  statistic = "Average"
+  threshold = "20"
+  dimensions = {
+  "AutoScalingGroupName" = "aws_autoscaling_group.ASG.name"
+  }
+  actions_enabled = true
+  alarm_actions = ["${aws_autoscaling_policy.scaledown-cpu-policy.arn}"]
 }
