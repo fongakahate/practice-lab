@@ -78,7 +78,7 @@ resource "aws_default_vpc" "default" {}
 
 resource "aws_security_group" "SG" {
   name = "SG"
-  description = "Description"
+  description = "SG TF"
 
   ingress {
     from_port = 80
@@ -111,6 +111,26 @@ resource "aws_security_group" "SG" {
   tags = {
     "Terraform" : "true"
   }
+}
+
+resource "aws_security_group" "DBSG" {
+  name = "DBSG"
+  description = "DBSG TF"
+
+  ingress {
+    from_port = 3306
+    to_port = 3306
+    protocol = "tcp"
+    security_groups = [aws_security_group.SG.id]
+  }
+
+  egress {
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  
 }
 
 resource "aws_default_subnet" "az1" {
@@ -237,7 +257,7 @@ resource "aws_cloudwatch_metric_alarm" "scaleup-cpu-alarm" {
   "AutoScalingGroupName" = "aws_autoscaling_group.ASG.name"
   }
   actions_enabled = true
-  alarm_actions = ["${aws_autoscaling_policy.scaleup-cpu-policy.arn}"]
+  alarm_actions = [aws_autoscaling_policy.scaleup-cpu-policy.arn]
 }
 
 resource "aws_autoscaling_policy" "scaledown-cpu-policy" {
@@ -263,5 +283,44 @@ resource "aws_cloudwatch_metric_alarm" "scaledown-cpu-alarm" {
   "AutoScalingGroupName" = "aws_autoscaling_group.ASG.name"
   }
   actions_enabled = true
-  alarm_actions = ["${aws_autoscaling_policy.scaledown-cpu-policy.arn}"]
+  alarm_actions = [aws_autoscaling_policy.scaledown-cpu-policy.arn]
+}
+
+resource "aws_route53_zone" "hostedzone" {
+  name = "hostedzoneexample.zyx"
+}
+
+resource "aws_route53_record" "arecord" {
+  zone_id = aws_route53_zone.hostedzone.id
+  name = "hostedzoneexample.zyx"
+  type = "A"
+
+  alias {
+    name = aws_lb.ELB.dns_name
+    zone_id = aws_lb.ELB.zone_id
+      evaluate_target_health = false
+  }
+}
+
+resource "aws_db_instance" "DB" {
+  allocated_storage = 5
+  engine = "mysql"
+  engine_version = "5.7"
+  instance_class = "db.t2.micro"
+  name = "DBTF"
+  identifier = "dbtfid"
+  username = "admin"
+  password = "PaSSw0rd"
+  skip_final_snapshot = true
+  vpc_security_group_ids = [aws_security_group.DBSG.id]
+  backup_retention_period = 1
+}
+
+resource "aws_db_instance" "DBRR" {
+  identifier = "dbrrtfid"
+  replicate_source_db = aws_db_instance.DB.identifier
+  instance_class = "db.t2.micro"
+  apply_immediately = true
+  skip_final_snapshot = true
+  vpc_security_group_ids = [aws_security_group.DBSG.id]
 }
