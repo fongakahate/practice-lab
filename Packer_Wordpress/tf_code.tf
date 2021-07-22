@@ -17,62 +17,62 @@ data "http" "myip" {
   url = "http://ipv4.icanhazip.com"
 }
 
-resource "aws_s3_bucket" "s3-bucket" {
-  bucket = "practical-lab-s3-bucket-656233"
-  acl = "public-read"
+# resource "aws_s3_bucket" "s3-bucket" {
+#   bucket = "practical-lab-s3-bucket-656233"
+#   acl = "public-read"
 
-  website {
-  index_document = "index.html"
-  }
+#   website {
+#   index_document = "index.html"
+#   }
 
-  tags = {
-    "Terraform" : "true"
-  }
-}
+#   tags = {
+#     "Terraform" : "true"
+#   }
+# }
 
-locals {
-  s3_origin_id = "s3origin"
-}
+# locals {
+#   s3_origin_id = "s3origin"
+# }
 
-resource "aws_cloudfront_distribution" "CFDistribution" {
-  origin {
-    domain_name = aws_s3_bucket.s3-bucket.bucket_regional_domain_name
-    origin_id = local.s3_origin_id
-  }
+# resource "aws_cloudfront_distribution" "CFDistribution" {
+#   origin {
+#     domain_name = aws_s3_bucket.s3-bucket.bucket_regional_domain_name
+#     origin_id = local.s3_origin_id
+#   }
 
-  enabled = true
-  comment = "TF Cloudfront Distribution"
-  default_root_object = "index.html"
+#   enabled = true
+#   comment = "TF Cloudfront Distribution"
+#   default_root_object = "index.html"
 
-  default_cache_behavior {
-    allowed_methods = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods = ["GET", "HEAD"]
-    target_origin_id = local.s3_origin_id
+#   default_cache_behavior {
+#     allowed_methods = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+#     cached_methods = ["GET", "HEAD"]
+#     target_origin_id = local.s3_origin_id
 
-    forwarded_values {
-      query_string = false
+#     forwarded_values {
+#       query_string = false
 
-      cookies {
-        forward = "none"
-      }
-    }
+#       cookies {
+#         forward = "none"
+#       }
+#     }
     
-    viewer_protocol_policy = "allow-all"
-    min_ttl = 0
-    default_ttl = 3600
-    max_ttl = 86400
-  }
+#     viewer_protocol_policy = "allow-all"
+#     min_ttl = 0
+#     default_ttl = 3600
+#     max_ttl = 86400
+#   }
   
-  restrictions {
-    geo_restriction {
-      restriction_type = "none"
-    }
-  }
+#   restrictions {
+#     geo_restriction {
+#       restriction_type = "none"
+#     }
+#   }
 
-  viewer_certificate {
-    cloudfront_default_certificate = true
-  }
-}
+#   viewer_certificate {
+#     cloudfront_default_certificate = true
+#   }
+# }
 
 resource "aws_default_vpc" "default" {}
 
@@ -198,7 +198,7 @@ resource "aws_lb_target_group" "TG" {
 
 resource "aws_launch_configuration" "LC" {
   name_prefix = "launch_configuration"
-  image_id = "ami-0d5eff06f840b45e9"
+  image_id = "ami-0e7ecbee23c8f8a4b"
   instance_type = "t2.micro"
   key_name = "practical-lab-key-pair"
   security_groups = [aws_security_group.SG.id]
@@ -207,7 +207,15 @@ resource "aws_launch_configuration" "LC" {
     create_before_destroy = true
   }
 
-  user_data = file("userdata.sh")
+  user_data = <<-EOF
+    #! /bin/bash
+    cd /var/www/html/
+    sed -i "s/'database_name_here'/'${aws_db_instance.DB.name}'/g" wp-config.php
+    sed -i "s/'username_here'/'${aws_db_instance.DB.username}'/g" wp-config.php
+    sed -i "s/'password_here'/'${aws_db_instance.DB.password}'/g" wp-config.php
+    sed -i "s/'localhost'/'${aws_db_instance.DB.endpoint}'/g" wp-config.php
+    echo ${aws_db_instance.DB.endpoint} > test.txt
+  EOF
 }
 
 resource "aws_autoscaling_group" "ASG" {
@@ -227,6 +235,10 @@ resource "aws_autoscaling_group" "ASG" {
     value = "true"
     propagate_at_launch = true
   }
+
+  depends_on = [
+    aws_db_instance.DB
+  ]
 }
 
 resource "aws_autoscaling_attachment" "AS_attach" {
@@ -286,21 +298,21 @@ resource "aws_cloudwatch_metric_alarm" "scaledown-cpu-alarm" {
   alarm_actions = [aws_autoscaling_policy.scaledown-cpu-policy.arn]
 }
 
-resource "aws_route53_zone" "hostedzone" {
-  name = "hostedzoneexample.zyx"
-}
+# resource "aws_route53_zone" "hostedzone" {
+#   name = "hostedzoneexample.zyx"
+# }
 
-resource "aws_route53_record" "arecord" {
-  zone_id = aws_route53_zone.hostedzone.id
-  name = "hostedzoneexample.zyx"
-  type = "A"
+# resource "aws_route53_record" "arecord" {
+#   zone_id = aws_route53_zone.hostedzone.id
+#   name = "hostedzoneexample.zyx"
+#   type = "A"
 
-  alias {
-    name = aws_lb.ELB.dns_name
-    zone_id = aws_lb.ELB.zone_id
-      evaluate_target_health = false
-  }
-}
+#   alias {
+#     name = aws_lb.ELB.dns_name
+#     zone_id = aws_lb.ELB.zone_id
+#       evaluate_target_health = false
+#   }
+# }
 
 resource "aws_db_instance" "DB" {
   allocated_storage = 5
@@ -316,11 +328,28 @@ resource "aws_db_instance" "DB" {
   backup_retention_period = 1
 }
 
-resource "aws_db_instance" "DBRR" {
-  identifier = "dbrrtfid"
-  replicate_source_db = aws_db_instance.DB.identifier
-  instance_class = "db.t2.micro"
-  apply_immediately = true
-  skip_final_snapshot = true
-  vpc_security_group_ids = [aws_security_group.DBSG.id]
+# resource "aws_db_instance" "DBRR" {
+#   identifier = "dbrrtfid"
+#   replicate_source_db = aws_db_instance.DB.identifier
+#   instance_class = "db.t2.micro"
+#   apply_immediately = true
+#   skip_final_snapshot = true
+#   vpc_security_group_ids = [aws_security_group.DBSG.id]
+# }
+
+output "rds_endpoint" {
+  value = "${aws_db_instance.DB.endpoint}"
+}
+
+output "rds_name" {
+  value = "${aws_db_instance.DB.name}"
+}
+
+output "rds_username" {
+  value = "${aws_db_instance.DB.username}"
+}
+
+output "rds_password" {
+  value = "${aws_db_instance.DB.password}"
+  sensitive = true
 }
