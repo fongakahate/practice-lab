@@ -1,0 +1,49 @@
+pipeline {
+    agent any
+	tools {
+		terraform 'Terraform'
+	}
+    environment {
+        AWS_ACCESS_KEY_ID = credentials('aws_access_key_id')
+        AWS_SECRET_ACCESS_KEY = credentials('aws_secret_access_key')
+    }
+    parameters {
+        booleanParam(name:'APPLY', defaultValue:false)
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                //git branch: 'tf4jenkins', url: 'https://github.com/fongakahate/practice-lab.git'
+                dir('/mnt/d/Terraform/tf4jenkins') {
+                    sh 'pwd'
+                    sh 'ls -la'
+                }
+            }
+        }
+        stage('Validation') {
+            steps {
+                dir('/mnt/d/Terraform/tf4jenkins') {
+                    sh 'terraform validate -no-color'
+                }
+            }
+        }
+        stage('TF_init_plan') {
+            steps {
+				dir('/mnt/d/Terraform/tf4jenkins') {
+                    sh 'terraform init -no-color'
+				    sh 'terraform plan -no-color'
+                }
+            }
+        }
+        stage('TF_apply') {
+            when {
+                expression {return APPLY == "true"}
+            }
+            steps {
+				dir('/mnt/d/Terraform/tf4jenkins') {
+                    sh 'terraform apply -auto-approve -no-color'
+                }
+            }
+        }
+    }
+}
