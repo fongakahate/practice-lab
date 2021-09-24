@@ -1,0 +1,49 @@
+{
+    "builders": [{
+        "type":"amazon-ebs",
+        "source_ami": "ami-0d5eff06f840b45e9",
+        "instance_type": "t2.micro",
+        "ssh_username": "ec2-user",
+        "ami_name": "packer {{timestamp}}"
+    }],
+    "provisioners": [
+        {
+            "type": "shell",
+            "inline": [
+                "sudo yum update -y",
+                "sudo yum install -y mc",
+                "sudo yum install -y httpd",
+                "sudo amazon-linux-extras install -y php7.2",
+                "sudo groupadd www",
+                "sudo usermod -a -G www ec2-user",
+                "sudo cd /var/www/",
+                "sudo curl -O https://wordpress.org/latest.tar.gz",
+                "sudo tar -zxf latest.tar.gz",
+                "sudo rm -rf /var/www/html",
+                "sudo mv wordpress /var/www/html",
+                "sudo cp /var/www/html/wp-config-sample.php /var/www/html/wp-config.php",
+                "sudo cd /var/www/html",
+                "sudo ls /var/www/html/wp-config.php > wpcheck.txt",
+                "sudo chown -R root:apache /var/www",
+                "sudo chmod 2775 /var/www",
+                "sudo find /var/www -type d -exec chmod 2775 {} +",
+                "sudo find /var/www -type f -exec chmod 0664 {} +",
+                "sudo service httpd start",
+                "sudo chkconfig httpd on"
+            ]
+        },
+		{
+			"type": "file",
+			"source": "wpcheck.txt",
+			"destination": "wpcheck.txt",
+			"direction": "download"
+		}
+    ],
+	"post-processors": [
+		{
+			"type": "manifest",
+			"output": "manifest.json",
+			"strip_path": true
+		}
+	]
+}
