@@ -5,7 +5,10 @@
         "source_ami": "ami-0d5eff06f840b45e9",
         "instance_type": "t2.micro",
         "ssh_username": "ec2-user",
-        "ami_name": "packer {{timestamp}}"
+        "ami_name": "packer {{timestamp}}",
+	"tags": {
+	  "Name": "Packer"
+	}
     }],
     "provisioners": [
         {

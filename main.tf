@@ -45,8 +45,33 @@ resource "aws_security_group" "PublicEC2SG" {
   }
 }
 
+data "aws_ami" "amiid" {
+  most_recent = true
+  owners = ["self"]
+
+  filter {
+    name   = "name"
+    values = ["packer*"]
+  }
+
+  filter {
+    name = "tag:Name"
+    values = ["Packer"]
+  }
+
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
 resource "aws_instance" "test" {
-  ami = "ami-id"
+  ami = "${data.aws_ami.amiid.id}"
   instance_type = "t2.micro"
   vpc_security_group_ids = [aws_security_group.PublicEC2SG.id]
   tags = {
